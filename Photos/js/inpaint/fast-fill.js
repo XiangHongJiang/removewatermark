@@ -32,20 +32,21 @@ const FastFill = {
         const height = imageData.height;
         const utils = InpaintUtils;
 
-        // 膨胀 mask 1 像素，确保边缘也被覆盖
-        const dilatedMask = utils.dilateMask(mask, width, height, 1);
+        // ★ 不再膨胀 mask，避免多吃边缘正常内容
+        // 直接使用原始 mask
+        const fillMask = mask;
 
         // ★ 核心修复：维护动态 known 数组
         // known[pixel] = 1 表示该像素已有有效颜色（原始非mask像素 + 已填充像素）
         // 这样已填充的像素可以立即参与后续像素的填充计算，实现真正的扩散
         const known = new Uint8Array(width * height);
         for (let i = 0; i < known.length; i++) {
-            known[i] = dilatedMask[i] > 0 ? 0 : 1;
+            known[i] = fillMask[i] > 0 ? 0 : 1;
         }
 
         for (let iter = 0; iter < iterations; iter++) {
             // 计算每个未知像素到最近已知像素的距离
-            const distances = this._computeDistances(dilatedMask, known, width, height);
+            const distances = this._computeDistances(fillMask, known, width, height);
 
             // 按距离排序，从近到远填充
             const order = this._getFillOrder(distances, width, height);
@@ -68,12 +69,10 @@ const FastFill = {
             }
         }
 
-        // 边缘平滑
-        const smoothed = utils.boxBlur(data, width, height, dilatedMask, 1);
-        for (let i = 0; i < smoothed.length; i++) {
-            if (dilatedMask[Math.floor(i / 4)] > 0) {
-                data[i] = smoothed[i];
-            }
+        // ★ 仅羽化 mask 边界，保留修复区域内部清晰度
+        const feathered = utils.featherMaskEdges(data, width, height, fillMask, 1);
+        for (let i = 0; i < feathered.length; i++) {
+            data[i] = feathered[i];
         }
 
         onProgress(1);

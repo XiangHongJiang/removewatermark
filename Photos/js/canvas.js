@@ -237,6 +237,53 @@ const CanvasManager = {
     },
 
     /**
+     * 在 overlay 上绘制多边形套索选区（实时预览）
+     * @param {Array<{x,y}>} points - 已确定的顶点
+     * @param {number} currentX - 当前鼠标 x
+     * @param {number} currentY - 当前鼠标 y
+     * @param {boolean} closed - 是否已闭合
+     */
+    drawLasso(points, currentX, currentY, closed) {
+        const ctx = this.overlayCtx;
+        if (points.length === 0) return;
+
+        ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+        ctx.lineWidth = 2 / this.scale;
+        ctx.setLineDash([6 / this.scale, 4 / this.scale]);
+
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
+
+        if (closed) {
+            // 闭合：连回起点
+            ctx.lineTo(points[0].x, points[0].y);
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.25)';
+            ctx.fill();
+        } else {
+            // 未闭合：画到当前鼠标位置（虚线预览）
+            ctx.stroke();
+            ctx.setLineDash([3 / this.scale, 3 / this.scale]);
+            ctx.beginPath();
+            ctx.moveTo(points[points.length - 1].x, points[points.length - 1].y);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
+
+        // 绘制顶点标记
+        ctx.fillStyle = 'rgba(255, 80, 80, 1)';
+        for (const p of points) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3 / this.scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    },
+
+    /**
      * 开始平移（记录起始位置）
      * @param {number} clientX
      * @param {number} clientY

@@ -38,12 +38,20 @@ const App = {
             // 工具按钮
             toolRect: document.getElementById('tool-rect'),
             toolBrush: document.getElementById('tool-brush'),
+            toolLasso: document.getElementById('tool-lasso'),
             brushSizeGroup: document.getElementById('brush-size-group'),
             brushSize: document.getElementById('brush-size'),
             brushSizeValue: document.getElementById('brush-size-value'),
             algoSelect: document.getElementById('algo-select'),
             strengthSlider: document.getElementById('strength-slider'),
             strengthValue: document.getElementById('strength-value'),
+
+            // 半透明水印还原
+            transparencyGroup: document.getElementById('transparency-group'),
+            watermarkColor: document.getElementById('watermark-color'),
+            btnSampleColor: document.getElementById('btn-sample-color'),
+            alphaSlider: document.getElementById('alpha-slider'),
+            alphaValue: document.getElementById('alpha-value'),
             btnUndo: document.getElementById('btn-undo'),
             btnRedo: document.getElementById('btn-redo'),
             btnClearSelection: document.getElementById('btn-clear-selection'),
@@ -101,6 +109,7 @@ const App = {
         // 工具切换
         this.dom.toolRect.addEventListener('click', () => this._setTool('rect'));
         this.dom.toolBrush.addEventListener('click', () => this._setTool('brush'));
+        this.dom.toolLasso.addEventListener('click', () => this._setTool('lasso'));
 
         // 画笔大小
         this.dom.brushSize.addEventListener('input', (e) => {
@@ -112,6 +121,30 @@ const App = {
         // 强度滑块
         this.dom.strengthSlider.addEventListener('input', (e) => {
             this.dom.strengthValue.textContent = e.target.value;
+        });
+
+        // 算法切换：显示/隐藏半透明参数
+        this.dom.algoSelect.addEventListener('change', (e) => {
+            const isTransparency = e.target.value === 'transparency';
+            this.dom.transparencyGroup.style.display = isTransparency ? 'flex' : 'none';
+            // 半透明模式自动切换到套索工具
+            if (isTransparency && SelectionManager.mode === 'rect') {
+                this._setTool('lasso');
+            }
+        });
+
+        // 透明度滑块
+        this.dom.alphaSlider.addEventListener('input', (e) => {
+            this.dom.alphaValue.textContent = e.target.value;
+        });
+
+        // 采样水印颜色
+        this.dom.btnSampleColor.addEventListener('click', () => this._sampleWatermarkColor());
+
+        // 套索双击闭合
+        this.dom.overlayCanvas.addEventListener('dblclick', (e) => {
+            if (SelectionManager.mode !== 'lasso') return;
+            this._closeLasso();
         });
 
         // 撤销/重做/清除
@@ -226,6 +259,7 @@ const App = {
 
         this.dom.toolRect.classList.toggle('active', tool === 'rect');
         this.dom.toolBrush.classList.toggle('active', tool === 'brush');
+        this.dom.toolLasso.classList.toggle('active', tool === 'lasso');
         this.dom.brushSizeGroup.style.display = tool === 'brush' ? 'flex' : 'none';
 
         this.dom.overlayCanvas.style.cursor = tool === 'brush' ? 'cell' : 'crosshair';
@@ -245,13 +279,28 @@ const App = {
 
         const pos = CanvasManager.screenToImage(e.clientX, e.clientY);
         SelectionManager.startDraw(pos.x, pos.y);
-        this._setState('selecting');
+
+        // 套索模式不需要进入 selecting 状态（点击式）
+        if (SelectionManager.mode !== 'lasso') {
+            this._setState('selecting');
+        }
     },
 
     _onMouseMove(e) {
         // 平移中
         if (CanvasManager.isPanning) {
             CanvasManager.movePan(e.clientX, e.clientY);
+            return;
+        }
+
+        // 套索模式：实时预览连线
+        if (SelectionManager.mode === 'lasso' && SelectionManager.isDrawing) {
+            const pos = CanvasManager.screenToImage(e.clientX, e.clientY);
+            const drawInfo = SelectionManager.moveDraw(pos.x, pos.y);
+            if (drawInfo) {
+                CanvasManager.drawMask(SelectionManager.mask);
+                CanvasManager.drawLasso(drawInfo.points, drawInfo.currentX, drawInfo.currentY, drawInfo.closed);
+            }
             return;
         }
 
@@ -276,6 +325,9 @@ const App = {
             return;
         }
 
+        // 套索模式：点击式，不需要 mouseup 闭合
+        if (SelectionManager.mode === 'lasso') return;
+
         if (this.state !== 'selecting') return;
         const pos = CanvasManager.screenToImage(
             e.clientX || (e.changedTouches && e.changedTouches[0].clientX),
@@ -292,6 +344,45 @@ const App = {
             const count = SelectionManager.getSelectionCount();
             this._setStatus(`已标记 ${count} 个像素为水印区域`);
         }
+    },
+
+    // ===== 套索闭合 =====
+
+    _closeLasso() {
+        const changed = SelectionManager.closeLasso();
+        CanvasManager.drawMask(SelectionManager.mask);
+        if (changed) {
+            this.history.push(CanvasManager.getImageData(), SelectionManager.mask);
+            this._updateButtons();
+            const count = SelectionManager.getSelectionCount();
+            this._setStatus(`套索已闭合 · 已标记 ${count} 个像素为水印区域`);
+        }
+    },
+
+    // ===== 采样水印颜色 =====
+
+    _sampleWatermarkColor() {
+        if (!SelectionManager.hasSelection()) {
+            alert('请先标记水印区域');
+            return;
+        }
+
+        const imageData = CanvasManager.getImageData();
+        const mask = SelectionManager.getMaskCopy();
+        const color = TransparencyFill.estimateWatermarkColor(
+            imageData.data,
+            imageData.width,
+            imageData.height,
+            mask
+        );
+
+        // 转为 hex
+        const hex = '#' +
+            color.r.toString(16).padStart(2, '0') +
+            color.g.toString(16).padStart(2, '0') +
+            color.b.toString(16).padStart(2, '0');
+        this.dom.watermarkColor.value = hex;
+        this._setStatus(`已采样水印颜色: RGB(${color.r}, ${color.g}, ${color.b})`);
     },
 
     // ===== 触摸事件 =====
@@ -327,6 +418,16 @@ const App = {
             this._redo();
         } else if (e.key === 'Escape' && !this.dom.compareModal.classList.contains('hidden')) {
             this._hideCompare();
+        } else if (e.key === 'Enter' && SelectionManager.mode === 'lasso' && SelectionManager.isDrawing) {
+            // 回车闭合套索
+            e.preventDefault();
+            this._closeLasso();
+        } else if (e.key === 'Escape' && SelectionManager.mode === 'lasso' && SelectionManager.isDrawing) {
+            // ESC 取消套索
+            e.preventDefault();
+            SelectionManager.cancelLasso();
+            CanvasManager.drawMask(SelectionManager.mask);
+            this._setStatus('套索已取消');
         }
     },
 
@@ -374,7 +475,13 @@ const App = {
 
         const algo = this.dom.algoSelect.value;
         this._setState('processing');
-        this._showProcessing(algo === 'fast' ? '正在快速填充...' : '正在纹理合成（可能需要几秒）...');
+
+        const statusMessages = {
+            fast: '正在快速填充...',
+            quality: '正在纹理合成（可能需要几秒）...',
+            transparency: '正在还原半透明水印...'
+        };
+        this._showProcessing(statusMessages[algo] || '正在处理...');
 
         // 保存处理前数据用于对比
         this.beforeImageData = CanvasManager.getImageData();
@@ -387,26 +494,47 @@ const App = {
             const mask = SelectionManager.getMaskCopy();
 
             const onProgress = (p) => {
-                this.dom.processingText.textContent =
-                    algo === 'fast'
-                        ? `正在快速填充... ${Math.round(p * 100)}%`
-                        : `正在纹理合成... ${Math.round(p * 100)}%`;
+                const labels = {
+                    fast: '正在快速填充',
+                    quality: '正在纹理合成',
+                    transparency: '正在还原半透明水印'
+                };
+                const label = labels[algo] || '正在处理';
+                this.dom.processingText.textContent = `${label}... ${Math.round(p * 100)}%`;
             };
 
             if (algo === 'fast') {
                 // ★ 根据强度滑块动态调整参数
                 // strength: 1-6, 默认3
-                // radius: 4 + strength*2 (6-16), iterations: strength (1-6)
+                // radius: 2 + strength (3-8), iterations: strength (1-6)
+                // 缩小 radius 范围，让填充更局部化，减少对周围内容的模糊扩散
                 const strength = parseInt(this.dom.strengthSlider.value);
-                const radius = 4 + strength * 2;
+                const radius = 2 + strength;
                 const iterations = strength;
                 FastFill.inpaint(imageData, mask, { radius, iterations, onProgress });
+                CanvasManager.putImageData(imageData);
+            } else if (algo === 'transparency') {
+                // ★ 半透明水印还原
+                const alpha = parseInt(this.dom.alphaSlider.value) / 100;
+                const hex = this.dom.watermarkColor.value;
+                const watermarkColor = {
+                    r: parseInt(hex.slice(1, 3), 16),
+                    g: parseInt(hex.slice(3, 5), 16),
+                    b: parseInt(hex.slice(5, 7), 16)
+                };
+                const strength = parseInt(this.dom.strengthSlider.value);
+                TransparencyFill.inpaint(imageData, mask, {
+                    alpha,
+                    watermarkColor,
+                    radius: 2 + strength,
+                    iterations: strength,
+                    onProgress
+                });
+                CanvasManager.putImageData(imageData);
             } else {
-                // 分块执行避免长时间阻塞
-                await this._runPatchMatchAsync(imageData, mask, onProgress);
+                // ★ 高质量模式：优先使用 Web Worker，避免阻塞 UI
+                await this._runPatchMatchWithWorker(imageData, mask, onProgress);
             }
-
-            CanvasManager.putImageData(imageData);
 
             // 清除选区（已处理）
             SelectionManager.clear();
@@ -426,25 +554,77 @@ const App = {
     },
 
     /**
-     * 异步执行 PatchMatch（分块避免阻塞）
+     * 使用 Web Worker 执行 PatchMatch（不阻塞 UI）
+     * file:// 协议下 Worker 不可用，自动降级到主线程
      */
-    async _runPatchMatchAsync(imageData, mask, onProgress) {
-        // ★ 根据强度滑块动态调整参数
-        const strength = parseInt(this.dom.strengthSlider.value);
-        const patchRadius = 2 + Math.floor(strength / 2); // 2-5
-        const totalSteps = strength + 1; // 2-7
-        const wrappedProgress = (p) => {
-            onProgress(p);
-        };
+    _runPatchMatchWithWorker(imageData, mask, onProgress) {
+        return new Promise((resolve, reject) => {
+            // 检测 Web Worker 支持
+            if (typeof Worker === 'undefined') {
+                this._runPatchMatchFallback(imageData, mask, onProgress).then(resolve).catch(reject);
+                return;
+            }
 
-        // 用 setTimeout(0) 让出主线程
+            let worker;
+            try {
+                worker = new Worker('js/inpaint/patch-match-worker.js');
+            } catch (e) {
+                // file:// 协议下 new Worker() 会同步抛异常，降级到主线程
+                this._runPatchMatchFallback(imageData, mask, onProgress).then(resolve).catch(reject);
+                return;
+            }
+
+            const requestId = Date.now();
+
+            worker.onmessage = (e) => {
+                const msg = e.data;
+                if (msg.type === 'progress' && msg.requestId === requestId) {
+                    onProgress(msg.progress);
+                } else if (msg.type === 'done' && msg.requestId === requestId) {
+                    CanvasManager.putImageData(msg.imageData);
+                    worker.terminate();
+                    resolve();
+                } else if (msg.type === 'error' && msg.requestId === requestId) {
+                    worker.terminate();
+                    reject(new Error(msg.error));
+                }
+            };
+
+            worker.onerror = () => {
+                worker.terminate();
+                // Worker 加载/执行失败，降级到主线程
+                this._runPatchMatchFallback(imageData, mask, onProgress).then(resolve).catch(reject);
+            };
+
+            const strength = parseInt(this.dom.strengthSlider.value);
+            const patchRadius = 2 + Math.floor(strength / 2);
+            const totalSteps = strength + 1;
+
+            worker.postMessage({
+                imageData,
+                mask,
+                options: { patchRadius, iterations: totalSteps },
+                requestId
+            });
+        });
+    },
+
+    /**
+     * 降级方案：主线程执行 PatchMatch
+     */
+    _runPatchMatchFallback(imageData, mask, onProgress) {
+        const strength = parseInt(this.dom.strengthSlider.value);
+        const patchRadius = 2 + Math.floor(strength / 2);
+        const totalSteps = strength + 1;
+
         return new Promise((resolve) => {
             setTimeout(() => {
                 PatchMatch.inpaint(imageData, mask, {
                     patchRadius,
                     iterations: totalSteps,
-                    onProgress: wrappedProgress
+                    onProgress
                 });
+                CanvasManager.putImageData(imageData);
                 resolve();
             }, 50);
         });

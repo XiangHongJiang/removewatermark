@@ -261,5 +261,66 @@ const InpaintUtils = {
         }
 
         return result;
+    },
+
+    /**
+     * 羽化 mask 边缘（仅在边界处做 alpha 混合，不膨胀区域）
+     * 与 boxBlur 不同：boxBlur 对整个 mask 区域做模糊，会模糊修复内容；
+     * featherMaskEdges 只在 mask 边界处做混合，保留修复区域内部清晰度。
+     * @param {Uint8ClampedArray} data
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} mask - 原始 mask（未膨胀）
+     * @param {number} radius - 羽化半径（默认1）
+     * @returns {Uint8ClampedArray} - 混合后的 data
+     */
+    featherMaskEdges(data, width, height, mask, radius = 1) {
+        const result = new Uint8ClampedArray(data);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                if (mask[idx] === 0) continue;
+
+                // 判断是否为边界像素：4邻域中有非mask像素
+                let isEdge = false;
+                const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
+                for (const [nx, ny] of neighbors) {
+                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                        isEdge = true;
+                        break;
+                    }
+                    if (mask[ny * width + nx] === 0) {
+                        isEdge = true;
+                        break;
+                    }
+                }
+                if (!isEdge) continue;
+
+                // 只对边界像素做加权混合（修复后的值 vs 原图邻域均值）
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (!this.inBounds(nx, ny, width, height)) continue;
+                        const nIdx = (ny * width + nx) * 4;
+                        r += data[nIdx];
+                        g += data[nIdx + 1];
+                        b += data[nIdx + 2];
+                        count++;
+                    }
+                }
+                if (count > 0) {
+                    const pIdx = idx * 4;
+                    // 50% 保留修复值，50% 混合邻域，仅做轻度过渡
+                    result[pIdx] = data[pIdx] * 0.5 + (r / count) * 0.5;
+                    result[pIdx + 1] = data[pIdx + 1] * 0.5 + (g / count) * 0.5;
+                    result[pIdx + 2] = data[pIdx + 2] * 0.5 + (b / count) * 0.5;
+                }
+            }
+        }
+
+        return result;
     }
 };

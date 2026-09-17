@@ -39,6 +39,10 @@
                         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.43 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>
                         <span>画笔涂抹</span>
                     </button>
+                    <button id="tool-lasso" class="tool-btn" title="多边形套索（点击添加顶点，双击/回车闭合）">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 3l7 4 4-4 7 7-4 4 4 7-7-4-4 4-7-7 4-4z"/></svg>
+                        <span>套索选择</span>
+                    </button>
                 </div>
 
                 <div class="tool-group" id="brush-size-group" style="display:none;">
@@ -51,12 +55,24 @@
                     <select id="algo-select" class="select">
                         <option value="fast">快速模式（简单背景）</option>
                         <option value="quality">高质量模式（纹理背景）</option>
+                        <option value="transparency">半透明还原（半透明水印）</option>
                     </select>
                 </div>
 
                 <div class="tool-group">
                     <label class="algo-label">去除强度: <span id="strength-value">3</span></label>
                     <input type="range" id="strength-slider" min="1" max="6" value="3" class="slider">
+                </div>
+
+                <div class="tool-group" id="transparency-group" style="display:none;">
+                    <label class="algo-label">水印颜色:</label>
+                    <input type="color" id="watermark-color" value="#ffffff" class="color-picker">
+                    <button id="btn-sample-color" class="tool-btn" title="从选区采样水印颜色">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17 3l4 4-9 9-4-4 9-9zm-7 10l-3 3v3h3l3-3-3-3z"/></svg>
+                        <span>采样</span>
+                    </button>
+                    <label class="algo-label">透明度: <span id="alpha-value">50</span>%</label>
+                    <input type="range" id="alpha-slider" min="10" max="90" value="50" class="slider">
                 </div>
 
                 <div class="tool-group">
@@ -162,6 +178,7 @@
     <script src="js/inpaint/utils.js"></script>
     <script src="js/inpaint/fast-fill.js"></script>
     <script src="js/inpaint/patch-match.js"></script>
+    <script src="js/inpaint/transparency-fill.js"></script>
     <script src="js/canvas.js"></script>
     <script src="js/selection.js"></script>
     <script src="js/app.js"></script>

@@ -35,17 +35,17 @@ const PatchMatch = {
         const height = imageData.height;
         const utils = InpaintUtils;
 
-        // 膨胀 mask 1 像素
-        const dilatedMask = utils.dilateMask(mask, width, height, 1);
+        // ★ 不再膨胀 mask，避免多吃边缘正常内容
+        const fillMask = mask;
 
         // ★ 动态 known 数组：已填充像素也视为已知
         const known = new Uint8Array(width * height);
         for (let i = 0; i < known.length; i++) {
-            known[i] = dilatedMask[i] > 0 ? 0 : 1;
+            known[i] = fillMask[i] > 0 ? 0 : 1;
         }
 
         // 获取 mask 包围盒，缩小搜索范围
-        const bbox = utils.getMaskBoundingBox(dilatedMask, width, height);
+        const bbox = utils.getMaskBoundingBox(fillMask, width, height);
         if (!bbox) {
             onProgress(1);
             return imageData;
@@ -62,7 +62,7 @@ const PatchMatch = {
         const maskPixels = [];
         for (let y = bbox.minY; y <= bbox.maxY; y++) {
             for (let x = bbox.minX; x <= bbox.maxX; x++) {
-                if (dilatedMask[y * width + x] > 0) {
+                if (fillMask[y * width + x] > 0) {
                     maskPixels.push({ x, y });
                 }
             }
@@ -92,9 +92,9 @@ const PatchMatch = {
                 const sy = y + oy;
 
                 if (!utils.inBounds(sx, sy, width, height)) continue;
-                if (dilatedMask[sy * width + sx] > 0) continue;
+                if (fillMask[sy * width + sx] > 0) continue;
 
-                const err = utils.patchSSD(data, width, height, x, y, sx, sy, patchRadius, dilatedMask);
+                const err = utils.patchSSD(data, width, height, x, y, sx, sy, patchRadius, fillMask);
                 if (err < bestErr) {
                     bestErr = err;
                     bestOX = ox;
@@ -139,9 +139,9 @@ const PatchMatch = {
                     const sy = y + candidateOY;
 
                     if (!utils.inBounds(sx, sy, width, height)) continue;
-                    if (dilatedMask[sy * width + sx] > 0) continue;
+                    if (fillMask[sy * width + sx] > 0) continue;
 
-                    const err = utils.patchSSD(data, width, height, x, y, sx, sy, patchRadius, dilatedMask);
+                    const err = utils.patchSSD(data, width, height, x, y, sx, sy, patchRadius, fillMask);
                     if (err < errors[idx]) {
                         errors[idx] = err;
                         offsetX[idx] = candidateOX;
@@ -160,8 +160,8 @@ const PatchMatch = {
                     const rx = cx + Math.floor((Math.random() * 2 - 1) * searchRadius);
                     const ry = cy + Math.floor((Math.random() * 2 - 1) * searchRadius);
 
-                    if (utils.inBounds(rx, ry, width, height) && dilatedMask[ry * width + rx] === 0) {
-                        const err = utils.patchSSD(data, width, height, x, y, rx, ry, patchRadius, dilatedMask);
+                    if (utils.inBounds(rx, ry, width, height) && fillMask[ry * width + rx] === 0) {
+                        const err = utils.patchSSD(data, width, height, x, y, rx, ry, patchRadius, fillMask);
                         if (err < errors[idx]) {
                             errors[idx] = err;
                             offsetX[idx] = rx - x;
@@ -196,12 +196,10 @@ const PatchMatch = {
             }
         }
 
-        // 边缘平滑过渡
-        const smoothed = utils.boxBlur(data, width, height, dilatedMask, 1);
-        for (let i = 0; i < smoothed.length; i++) {
-            if (dilatedMask[Math.floor(i / 4)] > 0) {
-                data[i] = smoothed[i];
-            }
+        // ★ 仅羽化 mask 边界，保留修复区域内部清晰度
+        const feathered = utils.featherMaskEdges(data, width, height, fillMask, 1);
+        for (let i = 0; i < feathered.length; i++) {
+            data[i] = feathered[i];
         }
 
         onProgress(1);

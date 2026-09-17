@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片去水印工具</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部标题栏 -->
+        <header class="app-header">
+            <h1>🖼️ 图片去水印工具</h1>
+            <p class="subtitle">纯浏览器端处理 · 图片不上传服务器 · 隐私安全</p>
+        </header>
+
+        <!-- 上传区域 -->
+        <div id="upload-zone" class="upload-zone">
+            <div class="upload-content">
+                <svg class="upload-icon" viewBox="0 0 24 24" width="64" height="64">
+                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                <p class="upload-text">拖拽图片到此处，或点击选择文件</p>
+                <p class="upload-hint">支持 JPG / PNG / WebP · 最大 20MB</p>
+                <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden>
+            </div>
+        </div>
+
+        <!-- 编辑区域（上传图片后显示） -->
+        <div id="editor" class="editor hidden">
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <div class="tool-group">
+                    <button id="tool-rect" class="tool-btn active" title="矩形框选">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 5h18v14H3V5zm2 2v10h14V7H5z"/></svg>
+                        <span>矩形框选</span>
+                    </button>
+                    <button id="tool-brush" class="tool-btn" title="画笔涂抹">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.43 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>
+                        <span>画笔涂抹</span>
+                    </button>
+                </div>
+
+                <div class="tool-group" id="brush-size-group" style="display:none;">
+                    <label class="brush-size-label">画笔大小: <span id="brush-size-value">20</span>px</label>
+                    <input type="range" id="brush-size" min="5" max="80" value="20" class="slider">
+                </div>
+
+                <div class="tool-group">
+                    <label class="algo-label">算法:</label>
+                    <select id="algo-select" class="select">
+                        <option value="fast">快速模式（简单背景）</option>
+                        <option value="quality">高质量模式（纹理背景）</option>
+                    </select>
+                </div>
+
+                <div class="tool-group">
+                    <label class="algo-label">去除强度: <span id="strength-value">3</span></label>
+                    <input type="range" id="strength-slider" min="1" max="6" value="3" class="slider">
+                </div>
+
+                <div class="tool-group">
+                    <button id="btn-undo" class="tool-btn" title="撤销" disabled>
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12.5 8c-2.65 0-5.02 1.09-6.5 2.79L3 8v6h6l-2.79-2.79C7.45 10.09 9.82 9 12.5 9c4.28 0 7.76 2.45 8.94 5.86l-1.93.57C18.5 12.5 15.77 11 12.5 11z"/></svg>
+                        <span>撤销</span>
+                    </button>
+                    <button id="btn-redo" class="tool-btn" title="重做" disabled>
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 2.03-10 5h2.94c.94-1.41 3.13-2.5 5.81-2.5 2.14 0 3.97.66 5.34 1.7L13 15h6V9l-1.6 1.6z"/></svg>
+                        <span>重做</span>
+                    </button>
+                    <button id="btn-clear-selection" class="tool-btn" title="清除所有选区">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        <span>清除选区</span>
+                    </button>
+                </div>
+
+                <div class="tool-group">
+                    <button id="btn-process" class="tool-btn primary" title="执行去水印" disabled>
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        <span>去除水印</span>
+                    </button>
+                </div>
+
+                <div class="tool-group">
+                    <button id="btn-reset" class="tool-btn" title="重新上传">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                        <span>重新上传</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 缩放控制栏 -->
+            <div class="zoom-bar">
+                <button id="btn-zoom-out" class="zoom-btn" title="缩小">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13H5v-2h14v2z"/></svg>
+                </button>
+                <span id="zoom-level" class="zoom-level">100%</span>
+                <button id="btn-zoom-in" class="zoom-btn" title="放大">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+                <button id="btn-zoom-fit" class="zoom-btn" title="适配窗口">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 5v14h18V5H3zm16 12H5V7h14v10z"/></svg>
+                </button>
+                <span class="zoom-hint">滚轮缩放 · 空格+拖拽平移</span>
+            </div>
+
+            <!-- 画布容器 -->
+            <div class="canvas-container" id="canvas-container">
+                <canvas id="main-canvas"></canvas>
+                <canvas id="overlay-canvas"></canvas>
+                <div class="canvas-hint" id="canvas-hint">在图片上拖拽框选或涂抹标记水印区域</div>
+            </div>
+
+            <!-- 底部操作栏 -->
+            <div class="bottom-bar">
+                <div class="status" id="status-text">就绪</div>
+                <div class="actions">
+                    <button id="btn-compare" class="tool-btn hidden" title="前后对比">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 3h8v18H3V3zm10 0h8v18h-8V3z" opacity="0.5"/><path fill="currentColor" d="M11 3v18H3V3h8zm0 0h2v18h-2V3z"/></svg>
+                        <span>前后对比</span>
+                    </button>
+                    <button id="btn-download" class="tool-btn primary hidden" title="下载结果">
+                        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                        <span>下载图片</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 前后对比弹窗 -->
+        <div id="compare-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>前后对比</h2>
+                    <button id="btn-close-compare" class="close-btn">✕</button>
+                </div>
+                <div class="compare-container" id="compare-container">
+                    <div class="compare-slider" id="compare-slider">
+                        <img id="compare-after" class="compare-img" alt="处理后">
+                        <div class="compare-before-wrapper" id="compare-before-wrapper">
+                            <img id="compare-before" class="compare-img" alt="处理前">
+                        </div>
+                        <div class="compare-divider" id="compare-divider">
+                            <div class="compare-handle">⇄</div>
+                        </div>
+                    </div>
+                    <p class="compare-hint">拖动中间滑块对比效果</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 处理中遮罩 -->
+        <div id="processing-overlay" class="processing-overlay hidden">
+            <div class="spinner"></div>
+            <p id="processing-text">正在处理...</p>
+        </div>
+    </div>
+
+    <!-- 脚本（按依赖顺序加载） -->
+    <script src="js/utils/history.js"></script>
+    <script src="js/utils/file.js"></script>
+    <script src="js/inpaint/utils.js"></script>
+    <script src="js/inpaint/fast-fill.js"></script>
+    <script src="js/inpaint/patch-match.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/selection.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

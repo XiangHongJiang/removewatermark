@@ -1,0 +1,546 @@
+/* ===== CSS Reset & Variables ===== */
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f3460;
+    --accent: #4e9eff;
+    --accent-hover: #3a8bef;
+    --danger: #e74c3c;
+    --success: #2ecc71;
+    --text-primary: #e8e8e8;
+    --text-secondary: #a0a0b0;
+    --border: #2a2a4a;
+    --radius: 8px;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --transition: 0.2s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+}
+
+#app {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ===== Header ===== */
+.app-header {
+    text-align: center;
+    padding: 24px 20px 16px;
+}
+
+.app-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* ===== Upload Zone ===== */
+.upload-zone {
+    flex: 1;
+    margin: 20px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 400px;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(78, 158, 255, 0.05);
+}
+
+.upload-content {
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.upload-icon {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    transition: var(--transition);
+}
+
+.upload-zone:hover .upload-icon {
+    color: var(--accent);
+}
+
+.upload-text {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.upload-hint {
+    font-size: 13px;
+}
+
+/* ===== Editor ===== */
+.editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin: 0 20px 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ===== Toolbar ===== */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 12px;
+    border-right: 1px solid var(--border);
+}
+
+.tool-group:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.tool-btn:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.tool-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.tool-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tool-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+}
+
+.tool-btn.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.tool-btn span {
+    line-height: 1;
+}
+
+/* ===== Form Controls ===== */
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 120px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.select {
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+}
+
+.brush-size-label,
+.algo-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* ===== Canvas Container ===== */
+.canvas-container {
+    position: relative;
+    flex: 1;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    border: 1px solid var(--border);
+}
+
+/* ===== Zoom Bar ===== */
+.zoom-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+}
+
+.zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.zoom-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.zoom-level {
+    font-size: 13px;
+    color: var(--text-secondary);
+    min-width: 50px;
+    text-align: center;
+}
+
+.zoom-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    opacity: 0.7;
+}
+
+/* 强度滑块 */
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 120px;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+#main-canvas,
+#overlay-canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#overlay-canvas {
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+.canvas-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--text-secondary);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* ===== Bottom Bar ===== */
+.bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    margin-top: 12px;
+}
+
+.status {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ===== Processing Overlay ===== */
+.processing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#processing-text {
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+/* ===== Compare Modal ===== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.modal-content {
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: var(--shadow);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.modal-header h2 {
+    font-size: 20px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+/* ===== Compare Slider ===== */
+.compare-container {
+    text-align: center;
+}
+
+.compare-slider {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    border-radius: 4px;
+    user-select: none;
+    max-width: 100%;
+}
+
+.compare-img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.compare-before-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.compare-before-wrapper .compare-img {
+    width: auto;
+    max-width: none;
+}
+
+.compare-divider {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background: var(--accent);
+    cursor: ew-resize;
+    z-index: 10;
+}
+
+.compare-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--accent);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.compare-hint {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .toolbar {
+        gap: 8px;
+    }
+
+    .tool-group {
+        padding-right: 8px;
+    }
+
+    .tool-btn span {
+        display: none;
+    }
+
+    .tool-btn {
+        padding: 8px 10px;
+    }
+
+    .app-header h1 {
+        font-size: 22px;
+    }
+}
